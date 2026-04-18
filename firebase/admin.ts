@@ -1,9 +1,11 @@
-import { initializeApp, getApps, cert, applicationDefault } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+let firebaseInstance: { auth: any; db: any } | null = null;
 
-// Initialize Firebase Admin SDK
 function initFirebaseAdmin() {
+  const { initializeApp, getApps, cert, applicationDefault } =
+    require("firebase-admin/app");
+  const { getAuth } = require("firebase-admin/auth");
+  const { getFirestore } = require("firebase-admin/firestore");
+
   const apps = getApps();
 
   if (!apps.length) {
@@ -36,4 +38,17 @@ function initFirebaseAdmin() {
   };
 }
 
-export const { auth, db } = initFirebaseAdmin();
+export function getFirebase() {
+  if (!firebaseInstance) {
+    firebaseInstance = initFirebaseAdmin();
+  }
+  return firebaseInstance;
+}
+
+export const auth = new Proxy({}, {
+  get: () => getFirebase().auth,
+});
+
+export const db = new Proxy({}, {
+  get: (target, prop) => getFirebase().db[prop as string],
+});
