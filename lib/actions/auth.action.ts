@@ -23,6 +23,8 @@ export async function setSessionCookie(idToken: string) {
     path: "/",
     sameSite: "lax",
   });
+
+  console.log("[setSessionCookie] Session cookie set successfully");
 }
 
 export async function signUp(params: SignUpParams) {
@@ -78,9 +80,27 @@ export async function signIn(params: SignInParams) {
         message: "User does not exist. Create an account.",
       };
 
+    // Check if user exists in Firestore
+    const firestoreUser = await db.collection("users").doc(userRecord.uid).get();
+    
+    if (!firestoreUser.exists) {
+      console.log("[signIn] User not found in Firestore, creating record for uid:", userRecord.uid);
+      
+      // Create user record in Firestore if it doesn't exist
+      await db.collection("users").doc(userRecord.uid).set({
+        name: userRecord.displayName || email.split("@")[0],
+        email: userRecord.email,
+      });
+    }
+
     await setSessionCookie(idToken);
+    
+    return {
+      success: true,
+      message: "Signed in successfully.",
+    };
   } catch (error: any) {
-    console.log("");
+    console.log("[signIn] Error:", error);
 
     return {
       success: false,
@@ -101,7 +121,11 @@ export async function getCurrentUser(): Promise<User | null> {
   const cookieStore = await cookies();
 
   const sessionCookie = cookieStore.get("session")?.value;
-  if (!sessionCookie) return null;
+  
+  if (!sessionCookie) {
+    console.log("[getCurrentUser] No session cookie found");
+    return null;
+  }
 
   try {
     const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
@@ -111,14 +135,17 @@ export async function getCurrentUser(): Promise<User | null> {
       .collection("users")
       .doc(decodedClaims.uid)
       .get();
-    if (!userRecord.exists) return null;
+    if (!userRecord.exists) {
+      console.log("[getCurrentUser] User record not found in db for uid:", decodedClaims.uid);
+      return null;
+    }
 
     return {
       ...userRecord.data(),
       id: userRecord.id,
     } as User;
   } catch (error) {
-    console.log(error);
+    console.log("[getCurrentUser] Error verifying session:", error);
 
     // Invalid or expired session
     return null;

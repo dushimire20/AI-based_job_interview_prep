@@ -1,22 +1,15 @@
 "use server";
 
-import { feedbackSchema } from "@/constants";
+import { generateObject } from "ai";
+import { google } from "@ai-sdk/google";
 
-async function getDb() {
-  const { getFirebase } = await import("@/firebase/admin");
-  return getFirebase().db;
-}
+import { db } from "@/firebase/admin";
+import { feedbackSchema } from "@/constants";
 
 export async function createFeedback(params: CreateFeedbackParams) {
   const { interviewId, userId, transcript, feedbackId } = params;
 
   try {
-    const [{ generateObject }, { google }, db] = await Promise.all([
-      import("ai"),
-      import("@ai-sdk/google"),
-      getDb(),
-    ]);
-
     const formattedTranscript = transcript
       .map(
         (sentence: { role: string; content: string }) =>
@@ -74,7 +67,6 @@ export async function createFeedback(params: CreateFeedbackParams) {
 }
 
 export async function getInterviewById(id: string): Promise<Interview | null> {
-  const db = await getDb();
   const interview = await db.collection("interviews").doc(id).get();
 
   return interview.data() as Interview | null;
@@ -84,7 +76,6 @@ export async function getFeedbackByInterviewId(
   params: GetFeedbackByInterviewIdParams
 ): Promise<Feedback | null> {
   const { interviewId, userId } = params;
-  const db = await getDb();
 
   const querySnapshot = await db
     .collection("feedback")
@@ -103,34 +94,44 @@ export async function getLatestInterviews(
   params: GetLatestInterviewsParams
 ): Promise<Interview[] | null> {
   const { userId, limit = 20 } = params;
-  const db = await getDb();
 
   const interviews = await db
     .collection("interviews")
-    .orderBy("createdAt", "desc")
     .where("finalized", "==", true)
-    .where("userId", "!=", userId)
-    .limit(limit)
     .get();
 
-  return interviews.docs.map((doc) => ({
+  const allInterviews: Interview[] = interviews.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
   })) as Interview[];
+
+  return allInterviews
+    .filter((interview) => interview.userId !== userId)
+    .sort((a, b) => {
+      const timeA = a.createdAt?.toMillis?.() || 0;
+      const timeB = b.createdAt?.toMillis?.() || 0;
+      return timeB - timeA;
+    })
+    .slice(0, limit);
 }
 
 export async function getInterviewsByUserId(
   userId: string
 ): Promise<Interview[] | null> {
-  const db = await getDb();
   const interviews = await db
     .collection("interviews")
     .where("userId", "==", userId)
-    .orderBy("createdAt", "desc")
     .get();
 
-  return interviews.docs.map((doc) => ({
+  const results = interviews.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
   })) as Interview[];
+
+  // Sort by createdAt in descending order
+  return results.sort((a, b) => {
+    const timeA = a.createdAt?.toMillis?.() || 0;
+    const timeB = b.createdAt?.toMillis?.() || 0;
+    return timeB - timeA;
+  });
 }

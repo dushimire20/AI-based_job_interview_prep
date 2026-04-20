@@ -81,12 +81,17 @@ const AuthForm = ({ type }: { type: FormType }) => {
           return;
         }
 
-        await signIn({
+        const result = await signIn({
           email,
           idToken,
         });
 
-        toast.success("Signed in successfully.");
+        if (!result.success) {
+          toast.error(result.message);
+          return;
+        }
+
+        toast.success(result.message);
         router.push("/");
       }
     } catch (error) {
@@ -101,7 +106,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
     <div className="card-border lg:min-w-[566px]">
       <div className="flex flex-col gap-6 card py-14 px-10">
         <div className="flex flex-row gap-2 justify-center">
-          <Image src="/logo.svg" alt="logo" height={32} width={38} />
+          <Image src="/logo.svg" alt="logo" height={32} width={38} style={{ width: 'auto', height: 'auto' }} />
           <h2 className="text-primary-100">PrepWise</h2>
         </div>
 
