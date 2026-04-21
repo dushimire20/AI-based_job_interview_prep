@@ -143,6 +143,15 @@ export async function POST(request: Request) {
       return respond({ success: false, error: msg });
     }
 
+    // Validate no template variables made it through
+    const isTemplate = (v: any) => typeof v === "string" && v.includes("{{");
+    if ([role, level, techstack, type, amount].some(isTemplate)) {
+      const msg = "Unresolved template variables received (e.g. {{role}}).";
+      errors.push(msg);
+      err("❌ TEMPLATE VARIABLE ERROR", msg);
+      return respond({ success: false, error: msg });
+    }
+
     log("✅ validation passed", { type, role, level, techstack, amount, finalUserId });
 
     // Generate questions
@@ -198,10 +207,6 @@ Return the questions formatted like this:
       finalized: true,
       coverImage: getRandomInterviewCover(),
       createdAt: new Date().toISOString(),
-      vapi: {
-        toolCallId,
-        functionName: toolCall?.function?.name,
-      },
     };
 
     log("💾 writing interview", interview);
