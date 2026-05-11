@@ -157,33 +157,28 @@ End the conversation on a polite and positive note.
 
 export const feedbackSchema = z.object({
   totalScore: z.number(),
-  categoryScores: z.tuple([
-    z.object({
-      name: z.literal("Communication Skills"),
+  categoryScores: z.object({
+    communicationSkills: z.object({
       score: z.number(),
       comment: z.string(),
     }),
-    z.object({
-      name: z.literal("Technical Knowledge"),
+    technicalKnowledge: z.object({
       score: z.number(),
       comment: z.string(),
     }),
-    z.object({
-      name: z.literal("Problem Solving"),
+    problemSolving: z.object({
       score: z.number(),
       comment: z.string(),
     }),
-    z.object({
-      name: z.literal("Cultural Fit"),
+    culturalFit: z.object({
       score: z.number(),
       comment: z.string(),
     }),
-    z.object({
-      name: z.literal("Confidence and Clarity"),
+    confidenceClarity: z.object({
       score: z.number(),
       comment: z.string(),
     }),
-  ]),
+  }),
   strengths: z.array(z.string()),
   areasForImprovement: z.array(z.string()),
   finalAssessment: z.string(),

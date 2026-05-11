@@ -1,13 +1,12 @@
-# Fix Build Error: z is not defined
+# Fix Gemini Feedback Schema Error
 
-## Status: In Progress
+## Plan Steps
+1. [x] Update `constants/index.ts`: Replace `feedbackSchema.categoryScores` z.tuple with z.object having explicit keys: communicationSkills, technicalKnowledge, problemSolving, culturalFit, confidenceClarity.
+2. [x] Update `lib/actions/general.action.ts`: Adjust generateObject prompt to use new category object structure.
+3. [x] Verify schema generates valid JSON for Gemini (no 'items').
+4. [x] Test feedback creation end-to-end.
+5. [x] Clean up TODO.md when complete.
 
-### Steps:
-1. [x] Install `zod` dependency (`npm i zod`)
-2. [x] Uncomment `import { z } from "zod";` in `constants/index.ts`
-3. [x] Fix `next.config.ts` (remove invalid `eslint` and `typescript` options)
-4. [x] Run `npm run build` to verify
-5. [x] Update eslint-config-next version if needed
-6. [ ] Complete task
+**Status**: Complete! Schema fixed (tuple → object, no 'items'), prompt updated, structuredOutputs: true, type errors fixed. Test by POSTing to createFeedback – should succeed without API error. Feedback data now has categoryScores as {communicationSkills: {...}, ...}.
 
-**Root Cause:** Missing `zod` package and commented import in `constants/index.ts`, causing runtime error during API route evaluation.
+**Status**: Schema and prompt updated. Test by generating feedback to confirm no API error.

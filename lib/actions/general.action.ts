@@ -19,7 +19,7 @@ export async function createFeedback(params: CreateFeedbackParams) {
 
     const { object } = await generateObject({
       model: google("gemini-2.5-flash", {
-        structuredOutputs: false,
+        structuredOutputs: true,
       }),
       schema: feedbackSchema,
       prompt: `
@@ -27,12 +27,19 @@ export async function createFeedback(params: CreateFeedbackParams) {
         Transcript:
         ${formattedTranscript}
 
-        Please score the candidate from 0 to 100 in the following areas. Do not add categories other than the ones provided:
-        - **Communication Skills**: Clarity, articulation, structured responses.
-        - **Technical Knowledge**: Understanding of key concepts for the role.
-        - **Problem-Solving**: Ability to analyze problems and propose solutions.
-        - **Cultural & Role Fit**: Alignment with company values and job role.
-        - **Confidence & Clarity**: Confidence in responses, engagement, and clarity.
+        Please return scores from 0 to 100 using this exact structure for categoryScores:
+        communicationSkills: {score: number (0-100), comment: string}
+        technicalKnowledge: {score: number (0-100), comment: string}
+        problemSolving: {score: number (0-100), comment: string}
+        culturalFit: {score: number (0-100), comment: string}
+        confidenceClarity: {score: number (0-100), comment: string}
+
+        Do not add other categories. Be thorough and point out mistakes/improvements. Examples:
+        - communicationSkills: Clarity, articulation, structured responses.
+        - technicalKnowledge: Understanding of key concepts.
+        - problemSolving: Ability to analyze problems.
+        - culturalFit: Alignment with company values/role.
+        - confidenceClarity: Confidence, engagement, clarity.
         `,
       system:
         "You are a professional interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories",
@@ -42,7 +49,19 @@ export async function createFeedback(params: CreateFeedbackParams) {
       interviewId: interviewId,
       userId: userId,
       totalScore: object.totalScore,
-      categoryScores: object.categoryScores,
+      categoryScores: Object.entries(object.categoryScores).map(
+        ([key, value]: [string, any]) => ({
+          name: key
+            .replace(/([A-Z])/g, " $1")
+            .toLowerCase()
+            .trim()
+            .split(" ")
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" "),
+          score: value.score,
+          comment: value.comment,
+        })
+      ),
       strengths: object.strengths,
       areasForImprovement: object.areasForImprovement,
       finalAssessment: object.finalAssessment,
@@ -87,7 +106,30 @@ export async function getFeedbackByInterviewId(
   if (querySnapshot.empty) return null;
 
   const feedbackDoc = querySnapshot.docs[0];
-  return { id: feedbackDoc.id, ...feedbackDoc.data() } as Feedback;
+  const feedbackData = feedbackDoc.data();
+
+  // Handle both old object format and new array format for categoryScores
+  if (
+    feedbackData.categoryScores &&
+    typeof feedbackData.categoryScores === "object" &&
+    !Array.isArray(feedbackData.categoryScores)
+  ) {
+    feedbackData.categoryScores = Object.entries(
+      feedbackData.categoryScores
+    ).map(([key, value]: [string, any]) => ({
+      name: key
+        .replace(/([A-Z])/g, " $1")
+        .toLowerCase()
+        .trim()
+        .split(" ")
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" "),
+      score: value.score,
+      comment: value.comment,
+    }));
+  }
+
+  return { id: feedbackDoc.id, ...feedbackData } as Feedback;
 }
 
 export async function getLatestInterviews(
@@ -108,8 +150,8 @@ export async function getLatestInterviews(
   return allInterviews
     .filter((interview) => interview.userId !== userId)
     .sort((a, b) => {
-      const timeA = a.createdAt?.toMillis?.() || 0;
-      const timeB = b.createdAt?.toMillis?.() || 0;
+      const timeA = (a.createdAt as any)?.toMillis?.() || Date.parse(a.createdAt as string) || 0;
+      const timeB = (b.createdAt as any)?.toMillis?.() || Date.parse(b.createdAt as string) || 0;
       return timeB - timeA;
     })
     .slice(0, limit);
@@ -130,8 +172,8 @@ export async function getInterviewsByUserId(
 
   // Sort by createdAt in descending order
   return results.sort((a, b) => {
-    const timeA = a.createdAt?.toMillis?.() || 0;
-    const timeB = b.createdAt?.toMillis?.() || 0;
+    const timeA = (a.createdAt as any)?.toMillis?.() || Date.parse(a.createdAt as string) || 0;
+    const timeB = (b.createdAt as any)?.toMillis?.() || Date.parse(b.createdAt as string) || 0;
     return timeB - timeA;
   });
 }

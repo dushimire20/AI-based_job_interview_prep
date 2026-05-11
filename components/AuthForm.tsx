@@ -135,6 +135,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
               type="email"
             />
 
+             
+
             <FormField
               control={form.control}
               name="password"
