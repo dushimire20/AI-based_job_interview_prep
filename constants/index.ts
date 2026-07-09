@@ -106,9 +106,12 @@ export const interviewer: CreateAssistantDTO = {
     model: "nova-2",
     language: "en",
   },
+  backchannelingEnabled: true,
+  backgroundSound: "off",
   voice: {
     provider: "11labs",
     voiceId: "sarah",
+    model: "eleven_turbo_v2_5",
     stability: 0.4,
     similarityBoost: 0.8,
     speed: 0.9,
@@ -117,7 +120,7 @@ export const interviewer: CreateAssistantDTO = {
   },
   model: {
     provider: "openai",
-    model: "gpt-4",
+    model: "gpt-4o-mini",
     messages: [
       {
         role: "system",

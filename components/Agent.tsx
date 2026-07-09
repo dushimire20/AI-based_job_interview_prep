@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { vapi } from "@/lib/vapi.sdk";
@@ -34,6 +35,7 @@ const Agent = ({
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastMessage, setLastMessage] = useState<string>("");
+  const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
 
   useEffect(() => {
     const onCallStart = () => {
@@ -62,7 +64,9 @@ const Agent = ({
     };
 
     const onError = (error: Error) => {
-      console.log("Error:", error);
+      console.error("VAPI Error:", error);
+      toast.error(error?.message || "Voice connection error. Please try again.");
+      setCallStatus(CallStatus.INACTIVE);
     };
 
     vapi.on("call-start", onCallStart);
@@ -88,7 +92,8 @@ const Agent = ({
     }
 
     const handleGenerateFeedback = async (messages: SavedMessage[]) => {
-      console.log("handleGenerateFeedback");
+      setIsFetchingFeedback(true);
+      toast.loading("Generating your feedback...", { id: "feedback" });
 
       const { success, feedbackId: id } = await createFeedback({
         interviewId: interviewId!,
@@ -97,10 +102,13 @@ const Agent = ({
         feedbackId,
       });
 
+      toast.dismiss("feedback");
+
       if (success && id) {
         router.push(`/interview/${interviewId}/feedback`);
       } else {
-        console.log("Error saving feedback");
+        toast.error("Failed to save feedback. Redirecting home.");
+        setIsFetchingFeedback(false);
         router.push("/");
       }
     };
@@ -196,7 +204,11 @@ const Agent = ({
 
       <div className="w-full flex justify-center">
         {callStatus !== "ACTIVE" ? (
-          <button className="relative btn-call" onClick={() => handleCall()}>
+          <button
+            className="relative btn-call"
+            onClick={() => handleCall()}
+            disabled={isFetchingFeedback || callStatus === CallStatus.CONNECTING}
+          >
             <span
               className={cn(
                 "absolute animate-ping rounded-full opacity-75",
@@ -205,7 +217,9 @@ const Agent = ({
             />
 
             <span className="relative">
-              {callStatus === "INACTIVE" || callStatus === "FINISHED"
+              {isFetchingFeedback
+                ? "Processing..."
+                : callStatus === "INACTIVE" || callStatus === "FINISHED"
                 ? "Call"
                 : ". . ."}
             </span>

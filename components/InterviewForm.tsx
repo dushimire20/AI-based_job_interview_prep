@@ -99,7 +99,7 @@ const InterviewForm = ({ userId }: { userId?: string }) => {
               <option value="Junior">Junior</option>
               <option value="Mid">Mid</option>
               <option value="Senior">Senior</option>
-            </select>
+            </select> 
             <svg
               className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
               fill="none"
